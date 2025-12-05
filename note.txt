@@ -1,0 +1,28 @@
+PCL = prodotto conto lavorazione, il cliente viene e si lavora il suo prodotto da noi 2 opzioni:
+1. il cliente porta tutta la materia prima e lavora (Costa MP = 0)
+2. il cliente porta un po di materie le altre le mettaimo noi (Costo MP != 0)
+
+costo del pesonale aumenta di X --> la spesa aumenta di X*1.4
+
+Spese trasporto	Others	 25.000 (costo) e ricavo perche rimborsato al cliente
+Premio Year22	Others	 12 18.981 
+12 premi per 18.981 € a premio (costo) [i premi vanno a diminuire il ricavo perché erogati a clienti]
+Addebiti vari	Others	 49.573 	 7,16 
+significa totale = 49.573 * 7,16 (costo)
+	esempio camion in attesa di scarico
+
+Ci sono 3 tipi di prodotti
+A acriliche (emulsioni)
+V viniliche (emulsioni)
+P polveri (non emulsioni)
+
+Le viniliche vengono usate per produrre polveri tot Viniliche = #polveri *1.67 + viniliche
+prodotti Conto Lavoro tutti acriliche con produzione = vendute
+
+ogni ton di polveri richiede 1,67 t di viniliche, che richiede 1/0.64 =1.56  ton di vapore che a sua volta richiede 86 smc di metano.
+
+ogni ton di emulsione prodotto costa 0.25 * 10.24€ 
+mp1 non va associato a PLC1 o PF1
+
+(1quota co2 = 1 ton vapore)
+smc = standard metro cubo 
