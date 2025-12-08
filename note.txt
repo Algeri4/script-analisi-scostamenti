@@ -27,3 +27,7 @@ mp1 non va associato a PLC1 o PF1
 (1quota co2 = 1 ton vapore)
 smc = standard metro cubo 
 
+
+
+3450000 oppure 3950000
+
