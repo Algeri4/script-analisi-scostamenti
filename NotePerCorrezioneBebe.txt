@@ -1,0 +1,39 @@
+Cosa non torna dal file di bebe
+Tabella ricavi budget perfetta
+
+Tabella variableCostsBudget
+1. Costo energia totale 2021	3450000
+da dove viene questo valore? forse hai scritto male un 4 con un 9?
+consiglio: usa riferimenti alle celle (esempio: ='CE 21-22'!F14), cosi poi anche quando lo faremo in python non dovremo ripensare da dove avevamo preso i valori.
+
+!leggo ora che l'hai preso dai commenti della tabella costi variabili, mi chiedo come mai allora il valore riportato nella prima tabella è diverso?!
+
+2. credo che non hai letto questa riga
+i prodotti di conto lavoro sono processati nel reparto acriliche (per tutti i prodotti produzione=vendite).
+quindi vanno aggiunti anche queste righe nel calcolo dell'energia usata
+
+3. errore grave
+per produrre una ton di A o V non serve una ton di vapore bensi, da tabella costi variabili
+PF A 0,93
+PF V 0,64
+
+4. in tutta questa tabella
+Note	Valore Budget (€)
+Costo metano	7080,210315
+Costo energia elettrica	1110442,518
+Materiali di consumo	153750
+Pulizia e smaltimento rifiuti	314878,9145
+Trasporti vendita	1328395,42
+Provvigioni su vendite	840816,2639
+costo CO2	962501,4738
+
+ti chiedo se puoi fare qeusto
+crea unaltra tabella dati in cui a fianco a ogni valore scirvi cosa rappresenta
+poi ti riferisci a lui con un riferimento, per favore non mettere mai in una formula un numero da solo, ma metti un riferimento a un punto in cui dici cosa è quel numero, altrimenti controllare se è giusto diventa estremamente lungo, grazie :)
+
+poi lo controllo
+
+Tabella FixedCoastBudget
+1. non hai seguito bene a lezione ma l'aumento del personale devi fare *1.4 perche in italia la tassazione è assurda...
+
+cmq ottimo lavora, continua così
