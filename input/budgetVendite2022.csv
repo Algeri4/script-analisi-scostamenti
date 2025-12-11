@@ -1,4 +1,4 @@
-Articolo;Categoria;Quantita (kg);P medio (�/kg);P medio ($/kg);CMP medio (�/kg);CMP medio ($/kg);MP con dazio
+Articolo;Categoria;Quantita (kg);P medio (e/kg);P medio ($/kg);CMP medio (e/kg);CMP medio ($/kg);MP con dazio
 MP1;MP;48000;0,93;;;0,651;x
 MP2;MP;700;4;;;2,8;x
 MP3;MP;1100;2,4;;;1,68;x
