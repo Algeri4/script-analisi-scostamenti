@@ -8,7 +8,8 @@ scripts = [
     "budgetCostiVariabili.py",
     "budgetCostiFissi.py",
     "budgetAltriCosti.py",
-    "budgetContoEconomico.py"
+    "budgetContoEconomico.py",
+    "analisiScostamentiMix.py"
 ]
 
 base_dir = Path(__file__).parent
