@@ -399,6 +399,147 @@ out["Mix Standard"] = out["_k"].map(lambda v: ce_ms.get(v, 0.0))
 out["Mix Effettivo"] = out["_k"].map(lambda v: ce_me.get(v, 0.0))
 out.drop(columns=["_k"], inplace=True)
 
+# =======================================================
+# MIX STANDARD (auto) usando principio k = Q_reale_tot / Q_budget_tot
+# =======================================================
+
+# 1) Calcolo k dalle vendite totali (tutti articoli)
+bud_v = get_table("input", "budgetVendite2022.csv")
+con_v = get_table("input", "consuntivo2022.csv")
+
+def pick_col(df, candidates):
+    for c in candidates:
+        if c in df.columns:
+            return c
+    return None
+
+q_bud_col = pick_col(bud_v, ["Quantita (kg)", "Quantita", "Qta", "Q"])
+q_con_col = pick_col(con_v, ["Quantita (kg)", "Quantita", "Qta", "Q"])
+
+if q_bud_col is None or q_con_col is None:
+    raise KeyError("Non trovo la colonna quantità in budgetVendite2022.csv o consuntivo2022.csv")
+
+q_tot_budget = float(to_num(bud_v[q_bud_col]).sum())
+q_tot_reale = float(to_num(con_v[q_con_col]).sum())
+k = (q_tot_reale / q_tot_budget) if q_tot_budget != 0 else 0.0
+
+print(f"\nDEBUG k (Q_reale_tot / Q_budget_tot) = {k:.9f}")
+
+# 2) Mix Standard parte dal Budget
+out["Mix Standard"] = out["Budget"]
+
+# 3) Applico Budget×k alle voci "guidate dai volumi" (voce per voce, senza mask)
+VOCI_SCALATE = [
+    "RICAVI DELLE VENDITE DI PRODOTTI FINITI",
+    "RICAVI DELLE VENDITE DI MATERIE PRIME - RIADDEBITI MP A GAMMA",
+    "RICAVI CONTO LAVORAZIONE - GAMMA E POLIKEMIA",
+    "ACQUISTO MATERIE PRIME",
+    "COSTO ENERGIA TOTALE",
+    "PULIZIA E SMALTIMENTO RIFIUTI",
+    "TRASPORTI E ONERI DI VENDITA + ACQUISTO",
+    "COSTO DI VENDITA - PROVVIGIONI-ENASARCO",
+]
+
+for voce in VOCI_SCALATE:
+    _set(out, "Mix Standard", voce, _v(out, "Budget", voce) * k)
+
+# 4) MATERIALI DI CONSUMO: da VariableCostsBudget.csv (Excel: =-VariableCostsC!G11)
+var_costs = get_table("output", "VariableCostsBudget.csv").copy()
+
+# colonna valore robusta
+val_col = None
+for c in ["Valore Budget (euro)", "Valore (euro)", "Valore Budget", "Valore"]:
+    if c in var_costs.columns:
+        val_col = c
+        break
+if val_col is None:
+    raise KeyError(f"VariableCostsBudget.csv: non trovo colonna valore. Colonne: {list(var_costs.columns)}")
+
+var_costs["Voce"] = var_costs["Voce"].astype(str).str.strip()
+m_mat = var_costs["Voce"].map(norm_voce).eq(norm_voce("Materiali di consumo"))
+mat_cons_val = float(to_num(var_costs.loc[m_mat, val_col]).sum())
+
+# in CE la voce è negativa
+_set(out, "Mix Standard", "MATERIALI DI CONSUMO", -abs(mat_cons_val))
+
+# 5) VARIAZIONE PRODOTTI FINITI in MS = 0 (come excel prof)
+_set(out, "Mix Standard", "VARIAZIONE PRODOTTI FINITI", 0.0)
+
+# 6) Ricostruisco i totali del CE in Mix Standard
+
+# A) target = A_budget * k
+A_target = _v(out, "Budget", "A)  TOTALE RICAVI PRODUZIONE") * k
+_set(out, "Mix Standard", "A)  TOTALE RICAVI PRODUZIONE", A_target)
+
+# ALTRI RICAVI come residuo per far tornare A)
+pf = _v(out, "Mix Standard", "RICAVI DELLE VENDITE DI PRODOTTI FINITI")
+mp = _v(out, "Mix Standard", "RICAVI DELLE VENDITE DI MATERIE PRIME - RIADDEBITI MP A GAMMA")
+pcl = _v(out, "Mix Standard", "RICAVI CONTO LAVORAZIONE - GAMMA E POLIKEMIA")
+var_prod = _v(out, "Mix Standard", "VARIAZIONE PRODOTTI FINITI")
+
+altri_ms = A_target - (pf + mp + pcl + var_prod)
+_set(out, "Mix Standard", "ALTRI RICAVI E LAVORI IN ECONOMIA", altri_ms)
+
+# B) = acquisto MP + variazione scorte (scorte restano come Budget, salvo regole diverse)
+acq_mp = _v(out, "Mix Standard", "ACQUISTO MATERIE PRIME")
+var_scorte = _v(out, "Mix Standard", "VARIAZIONE SCORTE")
+_set(out, "Mix Standard", "B)  TOTALE COSTI MATERIE PRIME", acq_mp + var_scorte)
+
+# C) = energia + materiali + pulizia
+c_energia = _v(out, "Mix Standard", "COSTO ENERGIA TOTALE")
+c_mat = _v(out, "Mix Standard", "MATERIALI DI CONSUMO")
+c_smalt = _v(out, "Mix Standard", "PULIZIA E SMALTIMENTO RIFIUTI")
+_set(out, "Mix Standard", "C)  COSTI VARIABILI DI PRODUZIONE", c_energia + c_mat + c_smalt)
+
+print("DEBUG C check:", round(
+    (c_energia + c_mat + c_smalt) - _v(out, "Mix Standard", "C)  COSTI VARIABILI DI PRODUZIONE"), 2)
+)
+
+# D) = trasporti + provvigioni
+trasp = _v(out, "Mix Standard", "TRASPORTI E ONERI DI VENDITA + ACQUISTO")
+provv = _v(out, "Mix Standard", "COSTO DI VENDITA - PROVVIGIONI-ENASARCO")
+_set(out, "Mix Standard", "D)  TOTALE COSTI DI VENDITA", trasp + provv)
+
+# E) = A + B + C + D
+A = _v(out, "Mix Standard", "A)  TOTALE RICAVI PRODUZIONE")
+B = _v(out, "Mix Standard", "B)  TOTALE COSTI MATERIE PRIME")
+C = _v(out, "Mix Standard", "C)  COSTI VARIABILI DI PRODUZIONE")
+D = _v(out, "Mix Standard", "D)  TOTALE COSTI DI VENDITA")
+_set(out, "Mix Standard", "E)  MARGINE OPERATIVO LORDO (A-B-C-D)", A + B + C + D)
+
+# H) = E + F + G (F e G restano budget nel Mix Standard)
+E = _v(out, "Mix Standard", "E)  MARGINE OPERATIVO LORDO (A-B-C-D)")
+F = _v(out, "Mix Standard", "F) TOTALE COSTI FISSI DI PRODUZIONE")
+G = _v(out, "Mix Standard", "G) TOTALE COSTI STRUTTURA COMM./AMM.VA")
+_set(out, "Mix Standard", "H) REDDITO OPERATIVO (EBITDA) (E-F-G)", E + F + G)
+
+# L) = H + I
+H = _v(out, "Mix Standard", "H) REDDITO OPERATIVO (EBITDA) (E-F-G)")
+I = _v(out, "Mix Standard", "I) TOTALE AMMORTAMENTI")
+_set(out, "Mix Standard", "L) MARGINE OPERATIVO NETTO (EBIT) (H-I)", H + I)
+
+# M) = oneri + proventi
+m_fin = _v(out, "Mix Standard", "(ONERI FINANZIARI)") + _v(out, "Mix Standard", "PROVENTI FINANZIARI")
+_set(out, "Mix Standard", "M)  ONERI E PROVENTI FINANZIARI NETTI", m_fin)
+
+# N) = L + M
+L = _v(out, "Mix Standard", "L) MARGINE OPERATIVO NETTO (EBIT) (H-I)")
+M = _v(out, "Mix Standard", "M)  ONERI E PROVENTI FINANZIARI NETTI")
+_set(out, "Mix Standard", "N) REDDITO OPERATIVO GESTIONE CARATTERISTICA (L-M)", L + M)
+
+# P) = N + O
+N = _v(out, "Mix Standard", "N) REDDITO OPERATIVO GESTIONE CARATTERISTICA (L-M)")
+O = _v(out, "Mix Standard", "O) ONERI E PROVENTI STRAORDINARI NETTI")
+_set(out, "Mix Standard", "P) RISULTATO ANTE IMPOSTE (N-O)", N + O)
+
+# Imposte e Netto
+P = _v(out, "Mix Standard", "P) RISULTATO ANTE IMPOSTE (N-O)")
+imposte = P * ALIQUOTA_IMPOSTE_SUL_REDITO
+_set(out, "Mix Standard", "IMPOSTE SUL REDDITO", -imposte)
+_set(out, "Mix Standard", "RISULTATO NETTO", P - imposte)
+
+print("\nDEBUG Mix Standard completato (k + eccezione Materiali di consumo).")
+
 # -------------------------------------------------------
 # Delta + check + round
 # -------------------------------------------------------
